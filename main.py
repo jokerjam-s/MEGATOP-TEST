@@ -13,6 +13,8 @@ CATALOG_URL = 'https://static-basket-01.wbbasket.ru/vol0/data/main-menu-ru-ru-v2
 
 MAX_LEVEL_NESTING = 99
 
+REPORT_FILE_NAME = 'data.xlsx'
+
 
 async def parse_category(
         data: dict,
@@ -31,10 +33,10 @@ async def parse_category(
     return parse_object
 
 
-async def parse_products(category: Category, prods_list: list[ProductsInfo], category_path: str = ''):
+async def parse_products(category: Category, prods_list_result: list[ProductsInfo], category_path: str = ''):
     if category.childs:
         for child in category.childs:
-            await parse_products(child, prods_list, category_path + f'{category.name} - ')
+            await parse_products(child, prods_list_result, category_path + f'{category.name} - ')
     else:
         products_info = ProductsInfo()
         products_info.categories_full_path = category_path + category.name
@@ -63,10 +65,10 @@ async def parse_products(category: Category, prods_list: list[ProductsInfo], cat
                     except Exception as e:
                         print(f'Error: {e}')
 
-        prods_list.append(products_info)
+        prods_list_result.append(products_info)
 
 
-async def save_to_excel(products: list[ProductsInfo]):
+async def save_to_excel(products: list[ProductsInfo], file_name: str) -> None:
     work_book = openpyxl.Workbook(iso_dates=True)
     work_book.remove(work_book.worksheets[0])
 
@@ -119,10 +121,10 @@ async def save_to_excel(products: list[ProductsInfo]):
             work_sheet.cell(row=row_no, column=14, value=prod.totalQuantity).border = border_cells
             row_no += 1
 
-        for letter in range(ord('A'), ord('A')+len(Product.__fields__)):
+        for letter in range(ord('A'), ord('A') + len(Product.__fields__)):
             work_sheet.column_dimensions[chr(letter)].auto_size = True
 
-    work_book.save('data.xlsx')
+    work_book.save(file_name)
 
 
 async def main():
@@ -138,8 +140,8 @@ async def main():
         categories = [c for c in [await parse_category(d, 0) for d in categories_data] if c is not None]
         prods = []
         for category in categories:
-            await parse_products(category, prods_list=prods)
-        await save_to_excel(prods)
+            await parse_products(category, prods_list_result=prods)
+        await save_to_excel(prods, REPORT_FILE_NAME)
 
 
 if __name__ == '__main__':
